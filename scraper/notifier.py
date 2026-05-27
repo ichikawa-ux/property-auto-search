@@ -7,7 +7,7 @@ from .scrapers.base import Property
 
 logger = logging.getLogger(__name__)
 
-PAGES_BASE_URL = os.environ.get("GITHUB_PAGES_URL", "https://example.github.io/realestate-monitor")
+PAGES_BASE_URL = os.environ.get("PAGES_URL", "https://example.github.io/realestate-monitor")
 
 SITE_LABELS = {
     "suumo": "SUUMO",
