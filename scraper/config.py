@@ -2,8 +2,14 @@ import os
 import json
 import logging
 import gspread
+from google.oauth2.service_account import Credentials
 
 logger = logging.getLogger(__name__)
+
+SCOPES = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive",
+]
 
 SHEET_CONDITIONS = "検索条件"
 SHEET_PROPERTIES = "物件データ"
@@ -51,7 +57,12 @@ AREA_LOOKUP: dict[str, dict] = {
 def get_sheets_client() -> gspread.Client:
     creds_json = os.environ["GOOGLE_CREDENTIALS_JSON"].lstrip("﻿")  # strip UTF-8 BOM if present
     creds_info = json.loads(creds_json)
-    return gspread.service_account_from_dict(creds_info)
+    # Use domain-wide delegation to impersonate the sheet owner
+    delegated_user = os.environ.get("GOOGLE_DELEGATED_USER", "ichikawa@s-table.co.jp")
+    creds = Credentials.from_service_account_info(
+        creds_info, scopes=SCOPES, subject=delegated_user
+    )
+    return gspread.Client(auth=creds)
 
 
 def _get_int(row: dict, *keys, default: int = 0) -> int:
