@@ -11,7 +11,7 @@
  */
 
 // ★ここを書き換えてください★
-var SPREADSHEET_ID = "あなたのスプレッドシートIDをここに入力";
+var SPREADSHEET_ID = "1BaqjE2U6FRqnTgU03tbOy6hMevTXVOVOT078qFa5sxk";
 
 function createForm() {
   // フォーム作成
