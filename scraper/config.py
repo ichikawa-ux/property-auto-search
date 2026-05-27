@@ -86,7 +86,14 @@ def load_conditions() -> list[dict]:
     """
     client = get_sheets_client()
     sheet_id = os.environ["GOOGLE_SHEETS_ID"]
-    wb = client.open_by_key(sheet_id)
+    logger.info(f"Opening spreadsheet: {sheet_id}")
+    try:
+        wb = client.open_by_key(sheet_id)
+    except Exception as e:
+        resp = getattr(e, 'response', None)
+        body = resp.text if resp is not None else "no response"
+        logger.error(f"Failed to open spreadsheet: {e} | response body: {body}")
+        raise
     ws = wb.worksheet(SHEET_CONDITIONS)
     rows = ws.get_all_records()
     conditions = []
