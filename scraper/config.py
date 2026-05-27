@@ -55,7 +55,7 @@ AREA_LOOKUP: dict[str, dict] = {
 
 
 def get_sheets_client() -> gspread.Client:
-    creds_json = os.environ["GOOGLE_CREDENTIALS_JSON"]
+    creds_json = os.environ["GOOGLE_CREDENTIALS_JSON"].lstrip("﻿")  # strip UTF-8 BOM if present
     creds_info = json.loads(creds_json)
     creds = Credentials.from_service_account_info(creds_info, scopes=SCOPES)
     return gspread.authorize(creds)
