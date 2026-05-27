@@ -57,11 +57,7 @@ AREA_LOOKUP: dict[str, dict] = {
 def get_sheets_client() -> gspread.Client:
     creds_json = os.environ["GOOGLE_CREDENTIALS_JSON"].lstrip("﻿")  # strip UTF-8 BOM if present
     creds_info = json.loads(creds_json)
-    # Use domain-wide delegation to impersonate the sheet owner
-    delegated_user = os.environ.get("GOOGLE_DELEGATED_USER", "ichikawa@s-table.co.jp")
-    creds = Credentials.from_service_account_info(
-        creds_info, scopes=SCOPES, subject=delegated_user
-    )
+    creds = Credentials.from_service_account_info(creds_info, scopes=SCOPES)
     return gspread.Client(auth=creds)
 
 
