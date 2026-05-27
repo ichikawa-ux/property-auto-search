@@ -32,8 +32,8 @@ jobs:
       - name: Run scraper
         run: python -m scraper.main
         env:
-          GOOGLE_SHEETS_ID: ${{ secrets.GOOGLE_SHEETS_ID }}
-          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+          SHEETS_WEB_APP_URL: ${{ secrets.SHEETS_WEB_APP_URL }}
+          SHEETS_WEB_APP_TOKEN: ${{ secrets.SHEETS_WEB_APP_TOKEN }}
           GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           PAGES_URL: ${{ secrets.PAGES_URL }}

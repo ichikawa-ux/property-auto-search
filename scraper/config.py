@@ -1,15 +1,9 @@
 import os
 import json
 import logging
-import gspread
-from google.oauth2.service_account import Credentials
+import requests
 
 logger = logging.getLogger(__name__)
-
-SCOPES = [
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive",
-]
 
 SHEET_CONDITIONS = "検索条件"
 SHEET_PROPERTIES = "物件データ"
@@ -54,11 +48,17 @@ AREA_LOOKUP: dict[str, dict] = {
 }
 
 
-def get_sheets_client() -> gspread.Client:
-    creds_json = os.environ["GOOGLE_CREDENTIALS_JSON"].lstrip("﻿")  # strip UTF-8 BOM if present
-    creds_info = json.loads(creds_json)
-    creds = Credentials.from_service_account_info(creds_info, scopes=SCOPES)
-    return gspread.Client(auth=creds)
+def _fetch_rows_via_web_app() -> list[dict]:
+    """Fetch spreadsheet rows via the Apps Script web app endpoint."""
+    url   = os.environ["SHEETS_WEB_APP_URL"]
+    token = os.environ.get("SHEETS_WEB_APP_TOKEN", "")
+    logger.info("Fetching conditions from Apps Script web app")
+    resp = requests.get(url, params={"token": token}, timeout=30)
+    resp.raise_for_status()
+    data = resp.json()
+    if "error" in data:
+        raise RuntimeError(f"Web app returned error: {data['error']}")
+    return data.get("rows", [])
 
 
 def _get_int(row: dict, *keys, default: int = 0) -> int:
@@ -75,23 +75,12 @@ def _get_int(row: dict, *keys, default: int = 0) -> int:
 
 def load_conditions() -> list[dict]:
     """
-    Load search conditions from Google Sheets.
+    Load search conditions from Google Sheets via Apps Script web app.
     Supports both:
       - Manual spreadsheet entry (original format)
       - Google Forms responses (エリア column with ward names, no 有効 column)
     """
-    client = get_sheets_client()
-    sheet_id = os.environ["GOOGLE_SHEETS_ID"]
-    logger.info(f"Opening spreadsheet: {sheet_id}")
-    try:
-        wb = client.open_by_key(sheet_id)
-    except Exception as e:
-        resp = getattr(e, 'response', None)
-        body = resp.text if resp is not None else "no response"
-        logger.error(f"Failed to open spreadsheet: {e} | response body: {body}")
-        raise
-    ws = wb.worksheet(SHEET_CONDITIONS)
-    rows = ws.get_all_records()
+    rows = _fetch_rows_via_web_app()
     conditions = []
 
     for i, row in enumerate(rows):
