@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>不動産物件業者検索</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>🏠 不動産物件業者検索</header>
+
+  <div id="property-section" class="section" style="display:none;">
+    <h3>現在の物件</h3>
+    <div class="property-name" id="prop-name">—</div>
+    <div class="property-meta" id="prop-meta">—</div>
+  </div>
+
+  <div id="no-property" class="empty">
+    物件ページを開いてから<br>拡張機能を使用してください
+  </div>
+
+  <div id="broker-section" style="display:none;">
+    <div class="btn-grid">
+      <button class="btn btn-broker" id="btn-reins" disabled>REINS</button>
+      <button class="btn btn-broker" id="btn-itanzi" disabled>イタンジ</button>
+      <button class="btn btn-broker" id="btn-es_b2b" disabled>いい生活</button>
+      <button class="btn btn-broker" id="btn-ielove" disabled>いえらぶ</button>
+    </div>
+
+    <button class="autofill-btn" id="btn-autofill">
+      このページのフォームを自動入力
+    </button>
+  </div>
+
+  <div class="status" id="status">物件データを確認中…</div>
+
+  <script src="sites_config.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

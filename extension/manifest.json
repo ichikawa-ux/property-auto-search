@@ -1,0 +1,57 @@
+{
+  "manifest_version": 3,
+  "name": "不動産物件業者検索",
+  "version": "1.0.0",
+  "description": "新着物件情報を業者サイトのフォームに自動入力します",
+  "permissions": ["storage", "tabs", "activeTab", "scripting"],
+  "host_permissions": [
+    "https://*.reins.or.jp/*",
+    "https://*.itanzi.jp/*",
+    "https://*.es-b2b.net/*",
+    "https://*.ielove.co.jp/*",
+    "https://*.github.io/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://*.github.io/*"],
+      "js": ["sites_config.js", "content/github_pages.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://*.reins.or.jp/*"],
+      "js": ["sites_config.js", "content/reins.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://*.itanzi.jp/*"],
+      "js": ["sites_config.js", "content/itanzi.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://*.es-b2b.net/*"],
+      "js": ["sites_config.js", "content/es_b2b.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://*.ielove.co.jp/*"],
+      "js": ["sites_config.js", "content/ielove.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

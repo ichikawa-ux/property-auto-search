@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>新着物件一覧</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <header>
+    <h1>🏠 新着物件一覧</h1>
+  </header>
+
+  <div class="container">
+    <div class="filter-bar">
+      <input id="filter-name" type="text" placeholder="物件名・住所で検索…">
+      <select id="filter-site">
+        <option value="">全サイト</option>
+        <option value="suumo">SUUMO</option>
+        <option value="homes">HOME'S</option>
+        <option value="athome">アットホーム</option>
+      </select>
+      <select id="filter-layout">
+        <option value="">全間取り</option>
+        <option value="1R">1R</option>
+        <option value="1K">1K</option>
+        <option value="1DK">1DK</option>
+        <option value="1LDK">1LDK</option>
+        <option value="2K">2K</option>
+        <option value="2DK">2DK</option>
+        <option value="2LDK">2LDK</option>
+        <option value="3LDK">3LDK</option>
+      </select>
+      <span class="count-badge" id="count">—</span>
+    </div>
+
+    <div id="property-list">
+      <div class="empty-state">読み込み中…</div>
+    </div>
+  </div>
+
+  <script src="assets/app.js"></script>
+  <script>initIndex();</script>
+</body>
+</html>
