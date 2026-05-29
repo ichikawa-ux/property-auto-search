@@ -21,8 +21,8 @@ def send_notification(to_email: str, properties: list[Property], condition_name:
     if not properties:
         return
 
-    gmail_addr = os.environ["GMAIL_ADDRESS"]
-    gmail_pass = os.environ["GMAIL_APP_PASSWORD"]
+    gmail_addr = os.environ["GMAIL_ADDRESS"].lstrip("﻿").strip()
+    gmail_pass = os.environ["GMAIL_APP_PASSWORD"].lstrip("﻿").strip()
 
     subject = f"【新着物件】{len(properties)}件 — {condition_name}"
     html_body = _build_html(properties, condition_name)
