@@ -2,73 +2,30 @@ import os
 import json
 import logging
 from datetime import datetime
-import gspread
-from .config import get_sheets_client, SHEET_PROPERTIES
 
 logger = logging.getLogger(__name__)
 
 PROPERTIES_JSON = "docs/data/properties.json"
 
-# Column order in the Google Sheets property data sheet
-COLUMNS = [
-    "物件ID", "サイト", "物件名", "住所", "家賃", "管理費",
-    "間取り", "面積", "築年数", "URL", "検知日時", "担当者名",
-]
-
 
 def load_seen_ids() -> set[str]:
-    """Return set of property unique IDs already recorded."""
-    client = get_sheets_client()
-    sheet_id = os.environ["GOOGLE_SHEETS_ID"]
-    wb = client.open_by_key(sheet_id)
-    ws = _get_or_create_sheet(wb, SHEET_PROPERTIES)
-    rows = ws.get_all_values()
-    if len(rows) < 2:
+    """Return set of property unique IDs already recorded (from JSON file)."""
+    if not os.path.exists(PROPERTIES_JSON):
         return set()
-    return {row[0] for row in rows[1:] if row}
+    try:
+        with open(PROPERTIES_JSON, encoding="utf-8") as f:
+            data = json.load(f)
+        return {p["id"] for p in data if "id" in p}
+    except (json.JSONDecodeError, KeyError):
+        return set()
 
 
 def save_properties(properties: list, condition_name: str):
-    """Append new properties to Google Sheets and update the JSON file."""
+    """Append new properties to docs/data/properties.json."""
     if not properties:
         return
-
-    client = get_sheets_client()
-    sheet_id = os.environ["GOOGLE_SHEETS_ID"]
-    wb = client.open_by_key(sheet_id)
-    ws = _get_or_create_sheet(wb, SHEET_PROPERTIES)
-
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    rows_to_add = []
-    for p in properties:
-        rows_to_add.append([
-            p.unique_id,
-            p.site,
-            p.name,
-            p.address,
-            p.rent,
-            p.management_fee,
-            p.layout,
-            p.area,
-            p.age,
-            p.url,
-            now,
-            condition_name,
-        ])
-
-    ws.append_rows(rows_to_add, value_input_option="USER_ENTERED")
-    logger.info(f"Saved {len(rows_to_add)} properties to Sheets")
-
     _update_json(properties, now, condition_name)
-
-
-def _get_or_create_sheet(wb: gspread.Spreadsheet, name: str) -> gspread.Worksheet:
-    try:
-        return wb.worksheet(name)
-    except gspread.WorksheetNotFound:
-        ws = wb.add_worksheet(title=name, rows=1000, cols=20)
-        ws.append_row(COLUMNS)
-        return ws
 
 
 def _update_json(new_properties: list, detected_at: str, condition_name: str):
