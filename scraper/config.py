@@ -51,9 +51,9 @@ AREA_LOOKUP: dict[str, dict] = {
 def _fetch_rows_via_web_app() -> list[dict]:
     """Fetch spreadsheet rows via the Apps Script web app endpoint."""
     url   = os.environ["SHEETS_WEB_APP_URL"].lstrip("﻿").strip()
-    token = os.environ.get("SHEETS_WEB_APP_TOKEN", "").strip()
+    token = os.environ.get("SHEETS_WEB_APP_TOKEN", "").lstrip("﻿").strip()
     logger.info("Fetching conditions from Apps Script web app")
-    resp = requests.get(url, params={"token": token}, timeout=30)
+    resp = requests.get(url, params={"token": token}, timeout=30, allow_redirects=True)
     resp.raise_for_status()
     data = resp.json()
     if "error" in data:
