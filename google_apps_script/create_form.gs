@@ -1,41 +1,61 @@
 /**
  * 物件検索条件 Googleフォーム 自動作成スクリプト
  *
- * 使い方:
- *  1. Googleスプレッドシートを開く
- *  2. 拡張機能 → Apps Script
- *  3. このコードを貼り付けて保存
- *  4. SPREADSHEET_ID を自分のスプレッドシートIDに書き換える
- *  5. 「createForm」を選択して「実行」ボタンを押す
- *  6. ログに表示されたフォームURLを担当者に共有する
+ * 【初回】createForm() を実行
+ * 【再作成・更新】recreateForm() を実行
+ *   → 旧「検索条件」シートを「検索条件_旧」にリネームして新フォームを作成します
  */
 
-// ★ここを書き換えてください★
 var SPREADSHEET_ID = "1BaqjE2U6FRqnTgU03tbOy6hMevTXVOVOT078qFa5sxk";
 
+// ─────────────────────────────────────────────────────────
+// フォームを再作成（既存フォームを新しい構成に更新する場合）
+// ─────────────────────────────────────────────────────────
+function recreateForm() {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+
+  // 旧「検索条件」シートを退避
+  var oldSheet = ss.getSheetByName("検索条件");
+  if (oldSheet) {
+    oldSheet.setName("検索条件_旧");
+    Logger.log("旧シートを「検索条件_旧」にリネームしました（データ移行後に削除してください）");
+  }
+
+  _buildAndLinkForm(ss);
+}
+
+// ─────────────────────────────────────────────────────────
+// 初回作成（検索条件シートがまだない場合）
+// ─────────────────────────────────────────────────────────
 function createForm() {
-  // フォーム作成
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  _buildAndLinkForm(ss);
+}
+
+// ─────────────────────────────────────────────────────────
+// フォーム本体を構築してスプレッドシートに連携
+// ─────────────────────────────────────────────────────────
+function _buildAndLinkForm(ss) {
   var form = FormApp.create("物件検索条件 登録フォーム");
   form.setDescription(
     "物件の自動監視条件を登録します。\n" +
-    "登録後、次の定期実行（毎時）から反映されます。\n\n" +
-    "⚠ 条件を削除・無効にしたい場合はスプレッドシートで「有効」列をFALSEに変更してください。"
+    "登録後、次の定期実行（毎時）から反映されます。"
   );
   form.setCollectEmail(false);
   form.setLimitOneResponsePerUser(false);
 
-  // ── 1. 担当者名 ──────────────────────────────────
+  // ── 1. 担当者名 ──
   form.addTextItem()
     .setTitle("担当者名")
     .setRequired(true);
 
-  // ── 2. メールアドレス ──────────────────────────────
+  // ── 2. メールアドレス ──
   form.addTextItem()
     .setTitle("メールアドレス")
     .setHelpText("新着物件の通知を受け取るメールアドレスを入力してください")
     .setRequired(true);
 
-  // ── 3. 対象サイト ──────────────────────────────────
+  // ── 3. 対象サイト ──
   var sitesItem = form.addCheckboxItem();
   sitesItem
     .setTitle("サイト")
@@ -47,76 +67,111 @@ function createForm() {
     ])
     .setRequired(true);
 
-  // ── 4. エリア ────────────────────────────────────
-  var areaItem = form.addCheckboxItem();
-  areaItem
-    .setTitle("エリア")
-    .setHelpText("監視するエリアを選択（複数選択可）※現在は東京23区のみ対応")
-    .setChoices([
-      areaItem.createChoice("千代田区"),
-      areaItem.createChoice("中央区"),
-      areaItem.createChoice("港区"),
-      areaItem.createChoice("新宿区"),
-      areaItem.createChoice("文京区"),
-      areaItem.createChoice("台東区"),
-      areaItem.createChoice("墨田区"),
-      areaItem.createChoice("江東区"),
-      areaItem.createChoice("品川区"),
-      areaItem.createChoice("目黒区"),
-      areaItem.createChoice("大田区"),
-      areaItem.createChoice("世田谷区"),
-      areaItem.createChoice("渋谷区"),
-      areaItem.createChoice("中野区"),
-      areaItem.createChoice("杉並区"),
-      areaItem.createChoice("豊島区"),
-      areaItem.createChoice("北区"),
-      areaItem.createChoice("荒川区"),
-      areaItem.createChoice("板橋区"),
-      areaItem.createChoice("練馬区"),
-      areaItem.createChoice("足立区"),
-      areaItem.createChoice("葛飾区"),
-      areaItem.createChoice("江戸川区"),
-    ])
-    .setRequired(true);
+  // ── 4. エリア（地域別グループに分けて選びやすく） ──────────────
+  form.addSectionHeaderItem()
+    .setTitle("▼ エリア（複数区選択可・複数グループをまたいでもOK）");
 
-  // ── 5. 家賃上限 ──────────────────────────────────
+  var areaCenter = form.addCheckboxItem();
+  areaCenter
+    .setTitle("エリア（都心）")
+    .setChoices([
+      areaCenter.createChoice("千代田区"),
+      areaCenter.createChoice("中央区"),
+      areaCenter.createChoice("港区"),
+      areaCenter.createChoice("新宿区"),
+      areaCenter.createChoice("文京区"),
+    ]);
+
+  var areaWest = form.addCheckboxItem();
+  areaWest
+    .setTitle("エリア（副都心・西部）")
+    .setChoices([
+      areaWest.createChoice("渋谷区"),
+      areaWest.createChoice("中野区"),
+      areaWest.createChoice("杉並区"),
+      areaWest.createChoice("練馬区"),
+      areaWest.createChoice("豊島区"),
+    ]);
+
+  var areaNorth = form.addCheckboxItem();
+  areaNorth
+    .setTitle("エリア（北部・城北）")
+    .setChoices([
+      areaNorth.createChoice("北区"),
+      areaNorth.createChoice("荒川区"),
+      areaNorth.createChoice("板橋区"),
+      areaNorth.createChoice("足立区"),
+      areaNorth.createChoice("葛飾区"),
+    ]);
+
+  var areaEast = form.addCheckboxItem();
+  areaEast
+    .setTitle("エリア（東部・下町）")
+    .setChoices([
+      areaEast.createChoice("台東区"),
+      areaEast.createChoice("墨田区"),
+      areaEast.createChoice("江東区"),
+      areaEast.createChoice("江戸川区"),
+    ]);
+
+  var areaSouth = form.addCheckboxItem();
+  areaSouth
+    .setTitle("エリア（南部・城南）")
+    .setChoices([
+      areaSouth.createChoice("品川区"),
+      areaSouth.createChoice("目黒区"),
+      areaSouth.createChoice("大田区"),
+      areaSouth.createChoice("世田谷区"),
+    ]);
+
+  // ── 5. 家賃上限（小数対応：8.5 = 85,000円） ──────────────────
+  form.addSectionHeaderItem().setTitle("▼ 希望条件");
+
   form.addTextItem()
     .setTitle("家賃上限（万円）")
-    .setHelpText("例: 15　→　15万円以下の物件を通知します")
+    .setHelpText("例: 15 → 15万円以下　8.5 → 85,000円以下（小数も入力可）")
     .setRequired(true);
 
-  // ── 6. 間取り ────────────────────────────────────
-  var layoutItem = form.addCheckboxItem();
-  layoutItem
-    .setTitle("間取り")
-    .setHelpText("対象にする間取りを選択（未選択の場合はすべて対象）")
+  // ── 6. 間取り（タイプ × 部屋数で組み合わせ指定） ───────────────
+  var layoutType = form.addCheckboxItem();
+  layoutType
+    .setTitle("間取タイプ")
+    .setHelpText("例：1LDKを探す場合は「LDK」を選択 / 未選択=すべて対象")
     .setChoices([
-      layoutItem.createChoice("1R"),
-      layoutItem.createChoice("1K"),
-      layoutItem.createChoice("1DK"),
-      layoutItem.createChoice("1LDK"),
-      layoutItem.createChoice("2K"),
-      layoutItem.createChoice("2DK"),
-      layoutItem.createChoice("2LDK"),
-      layoutItem.createChoice("3K"),
-      layoutItem.createChoice("3DK"),
-      layoutItem.createChoice("3LDK"),
+      layoutType.createChoice("ワンルーム"),
+      layoutType.createChoice("K（キッチン）"),
+      layoutType.createChoice("DK（ダイニングキッチン）"),
+      layoutType.createChoice("SDK（サービスルーム＋DK）"),
+      layoutType.createChoice("LDK（リビングダイニングキッチン）"),
+      layoutType.createChoice("SLDK（サービスルーム＋LDK）"),
     ])
     .setRequired(false);
 
-  // ── 7. 築年数上限 ────────────────────────────────
+  var roomCount = form.addCheckboxItem();
+  roomCount
+    .setTitle("間取部屋数")
+    .setHelpText("例：1LDKを探す場合は「1室」を選択 / 未選択=すべての部屋数対象")
+    .setChoices([
+      roomCount.createChoice("1室"),
+      roomCount.createChoice("2室"),
+      roomCount.createChoice("3室"),
+      roomCount.createChoice("4室以上"),
+    ])
+    .setRequired(false);
+
+  // ── 7. 築年数上限 ──
   form.addTextItem()
     .setTitle("築年数上限（年）")
-    .setHelpText("例: 20　→　築20年以内。空白にすると制限なし")
+    .setHelpText("例: 20 → 築20年以内。空白=制限なし")
     .setRequired(false);
 
-  // ── 8. 駅徒歩上限 ────────────────────────────────
+  // ── 8. 駅徒歩上限 ──
   form.addTextItem()
     .setTitle("駅徒歩上限（分）")
-    .setHelpText("例: 10　→　最寄り駅から徒歩10分以内。空白にすると制限なし")
+    .setHelpText("例: 10 → 最寄り駅から徒歩10分以内。空白=制限なし")
     .setRequired(false);
 
-  // ── 9. BT別（バストイレ別）────────────────────────
+  // ── 9. BT別 ──
   var btItem = form.addMultipleChoiceItem();
   btItem
     .setTitle("BT別（バストイレ別）")
@@ -127,7 +182,7 @@ function createForm() {
     .showOtherOption(false)
     .setRequired(true);
 
-  // ── 10. 独立洗面台 ───────────────────────────────
+  // ── 10. 独立洗面台 ──
   var washstandItem = form.addMultipleChoiceItem();
   washstandItem
     .setTitle("独立洗面台")
@@ -138,11 +193,11 @@ function createForm() {
     .showOtherOption(false)
     .setRequired(true);
 
-  // ── 11. ペット ────────────────────────────────────
+  // ── 11. ペット ──
   var petItem = form.addMultipleChoiceItem();
   petItem
     .setTitle("ペット")
-    .setHelpText("「可・相談可を含む」を選ぶとペット可＋相談可の両方を一度に検索します")
+    .setHelpText("「可・相談可を含む」→ ペット可＋相談可の両方を検索")
     .setChoices([
       petItem.createChoice("可・相談可を含む"),
       petItem.createChoice("不可のみ"),
@@ -151,26 +206,23 @@ function createForm() {
     .showOtherOption(false)
     .setRequired(true);
 
-  // ── 12. 階数（階以上）────────────────────────────
+  // ── 12. 最低階数 ──
   form.addTextItem()
     .setTitle("最低階数（階以上）")
-    .setHelpText("例: 2　→　2階以上。空白にすると制限なし（1階も含む）")
+    .setHelpText("例: 2 → 2階以上。空白=1階も含む")
     .setRequired(false);
 
-  // ── スプレッドシートと連携 ────────────────────────
-  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  // ── スプレッドシートと連携 ──
   form.setDestination(FormApp.DestinationType.SPREADSHEET, ss.getId());
-
-  // フォーム回答シートを「検索条件」にリネーム
   SpreadsheetApp.flush();
-  Utilities.sleep(2000); // シートが作成されるのを待つ
+  Utilities.sleep(3000);
 
+  // 新しく作られたシートを「検索条件」にリネーム
   var sheets = ss.getSheets();
   for (var i = 0; i < sheets.length; i++) {
-    var name = sheets[i].getName();
-    if (name.indexOf("フォームの回答") !== -1) {
+    if (sheets[i].getName().indexOf("フォームの回答") !== -1) {
       sheets[i].setName("検索条件");
-      Logger.log("シートを「検索条件」にリネームしました");
+      Logger.log("新シートを「検索条件」にリネームしました");
       break;
     }
   }
