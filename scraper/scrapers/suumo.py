@@ -20,15 +20,6 @@ class SuumoScraper(BaseScraper):
     SITE_NAME = "suumo"
 
     def search(self, condition: dict) -> list[Property]:
-        """
-        condition keys:
-          ta: prefecture code (e.g. "13" for Tokyo)
-          sc: list of city codes (e.g. ["13101", "13102"])
-          km: max rent in 10000 yen (e.g. 15)
-          layouts: list of layout names (e.g. ["1K", "1DK"])
-          et: max walk minutes (e.g. 10)
-          cn: max building age in years (e.g. 20)
-        """
         params = self._build_params(condition)
         properties = []
         page = 1
@@ -50,10 +41,12 @@ class SuumoScraper(BaseScraper):
 
             properties.extend(page_props)
 
+            # Pagination: check if there's a next page
+            # Try class-based first, fall back to link scan
             next_link = soup.select_one("li.pagination-parts a[href*='pn=']")
             current_page_el = soup.select_one("li.pagination-parts.is-active")
-            if not next_link or (current_page_el and int(current_page_el.text.strip()) >= page):
-                # Try another pagination pattern
+            if not next_link or (current_page_el and current_page_el.text.strip().isdigit()
+                                  and int(current_page_el.text.strip()) >= page):
                 all_pages = soup.select("div.pagination ol li a")
                 page_nums = [int(a.text.strip()) for a in all_pages if a.text.strip().isdigit()]
                 if page >= max(page_nums, default=page):
@@ -100,34 +93,28 @@ class SuumoScraper(BaseScraper):
         if condition.get("cn"):
             params["cn"] = str(condition["cn"])
 
-        # --- 設備・条件 ---
-        # ⚠ bc の値はSUUMOの検索フォームHTMLを確認して調整してください
-        # （bc=09: バス・トイレ別, bc=11: 独立洗面台 は推定値です）
         bc_codes = []
         if condition.get("bt_required"):
-            bc_codes.append("09")   # バス・トイレ別
+            bc_codes.append("09")
         if condition.get("washstand_required"):
-            bc_codes.append("11")   # 独立洗面台
+            bc_codes.append("11")
         if bc_codes:
             params["bc"] = bc_codes
 
         pet = condition.get("pet_option", "")
         if pet == "可相談":
-            params["pe"] = "1"   # ペット可・相談可（SUUMOはpe=1で両方含む）
+            params["pe"] = "1"
 
         if condition.get("floor_min"):
-            params["ff"] = str(condition["floor_min"])   # 何階以上
+            params["ff"] = str(condition["floor_min"])
 
         return params
 
     def _parse_list(self, soup: BeautifulSoup) -> list[Property]:
         properties = []
-
-        # Primary selector: property cards with jnc_ links
-        prop_links = soup.select('a[href*="/chintai/jnc_"]')
         seen_ids = set()
 
-        for link in prop_links:
+        for link in soup.select('a[href*="/chintai/jnc_"]'):
             href = link.get("href", "")
             m = re.search(r"jnc_(\d+)", href)
             if not m:
@@ -137,57 +124,64 @@ class SuumoScraper(BaseScraper):
                 continue
             seen_ids.add(prop_id)
 
-            # Walk up to find the property container
-            container = link
-            for _ in range(8):
-                container = container.parent
-                if container is None:
-                    break
-                if container.name in ("li", "div") and len(container.text) > 50:
-                    break
-
-            prop = self._extract_from_container(container, prop_id, href)
-            if prop:
-                properties.append(prop)
-
-        return properties
-
-    def _extract_from_container(self, container, prop_id: str, href: str) -> Property | None:
-        try:
-            text = container.get_text(separator="\n") if container else ""
-            lines = [l.strip() for l in text.splitlines() if l.strip()]
-
-            name = ""
-            h3 = container.find("h3") if container else None
-            if h3:
-                name = h3.get_text(strip=True)
-                # Remove prefix like "賃貸マンション "
-                name = re.sub(r"^(賃貸|分譲)\S+\s+", "", name)
-
-            address = ""
-            rent = ""
-            layout = ""
-            area = ""
-            age = ""
-            station = ""
-
-            for line in lines:
-                if re.search(r"東京都|大阪府|[都道府県]", line) and not address:
-                    address = line
-                elif re.match(r"\d+\.?\d*万円", line) and not rent:
-                    rent = line
-                elif re.match(r"\d+[KDL]+R?", line) and not layout:
-                    layout = line
-                elif re.search(r"\d+\.?\d*m²", line) and not area:
-                    area = line
-                elif re.search(r"築\d+年", line) and not age:
-                    age = line
-                elif re.search(r"駅\s*歩\d+分|徒歩\d+分", line) and not station:
-                    station = line
-
             url = f"https://suumo.jp{href}" if href.startswith("/") else href
 
-            return Property(
+            # ── 部屋レベル：trから家賃・間取り・面積を取得 ──────────────
+            row = link
+            while row and row.name != "tr":
+                row = row.parent
+
+            rent = layout = area = ""
+            if row:
+                for line in [l.strip() for l in row.get_text("\n").splitlines() if l.strip()]:
+                    if re.search(r"\d+\.?\d*万円", line) and not rent:
+                        m2 = re.search(r"\d+\.?\d*万円", line)
+                        rent = m2.group() if m2 else line
+                    elif re.match(r"^\d+[KDLkdl]+R?$|^ワンルーム$|^1R$", line) and not layout:
+                        layout = line
+                    elif re.search(r"\d+\.?\d*m[²2㎡]", line) and not area:
+                        m2 = re.search(r"\d+\.?\d*m[²2㎡]", line)
+                        area = m2.group() if m2 else line
+
+            # ── 建物レベル：trの上位から住所・駅・築年数・物件名を取得 ──
+            section = row
+            for _ in range(20):
+                if section is None:
+                    break
+                section = section.parent
+                if section is None:
+                    break
+                txt = section.get_text()
+                # 住所と駅情報の両方を含む大きな要素を探す
+                if (len(txt) > 150
+                        and re.search(r"[都道府県].{2,6}[市区町村]", txt)
+                        and re.search(r"歩\d+分|徒歩\d+分", txt)):
+                    break
+
+            name = address = station = age = ""
+            if section:
+                lines = [l.strip() for l in section.get_text("\n").splitlines() if l.strip()]
+                addr_idx = None
+                for i, line in enumerate(lines):
+                    if not address and re.search(r"[都道府県].{1,6}[市区町村]", line):
+                        address = line
+                        addr_idx = i
+                    elif not station and re.search(r"歩\d+分|徒歩\d+分", line):
+                        station = line
+                    elif not age and re.search(r"築\d+年", line):
+                        age = line
+
+                # 物件名：住所より前の行から探す
+                if addr_idx is not None:
+                    for j in range(max(0, addr_idx - 4), addr_idx):
+                        candidate = lines[j]
+                        if (len(candidate) > 2
+                                and not re.search(r"[市区町村]\d|歩\d+分|万円|\d+m|築\d", candidate)
+                                and not re.match(r"^\d+$", candidate)):
+                            name = candidate
+                            break
+
+            properties.append(Property(
                 site=self.SITE_NAME,
                 property_id=prop_id,
                 name=name or f"物件_{prop_id}",
@@ -199,7 +193,6 @@ class SuumoScraper(BaseScraper):
                 age=age,
                 url=url,
                 station_access=station,
-            )
-        except Exception as e:
-            logger.warning(f"Failed to extract SUUMO property {prop_id}: {e}")
-            return None
+            ))
+
+        return properties
