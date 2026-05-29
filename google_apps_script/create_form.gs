@@ -67,62 +67,44 @@ function _buildAndLinkForm(ss) {
     ])
     .setRequired(true);
 
-  // ── 4. エリア（地域別グループに分けて選びやすく） ──────────────
+  // ── 4. エリア（チェックボックスグリッド：横並びで見やすく） ─────
   form.addSectionHeaderItem()
     .setTitle("▼ エリア（複数区選択可・複数グループをまたいでもOK）");
 
-  var areaCenter = form.addCheckboxItem();
-  areaCenter
-    .setTitle("エリア（都心）")
-    .setChoices([
-      areaCenter.createChoice("千代田区"),
-      areaCenter.createChoice("中央区"),
-      areaCenter.createChoice("港区"),
-      areaCenter.createChoice("新宿区"),
-      areaCenter.createChoice("文京区"),
-    ]);
+  var areaGrid1 = form.addCheckboxGridItem();
+  areaGrid1
+    .setTitle("エリア①（都心）")
+    .setRows(["選択"])
+    .setColumns(["千代田区", "中央区", "港区", "新宿区", "文京区"])
+    .setRequired(false);
 
-  var areaWest = form.addCheckboxItem();
-  areaWest
-    .setTitle("エリア（副都心・西部）")
-    .setChoices([
-      areaWest.createChoice("渋谷区"),
-      areaWest.createChoice("中野区"),
-      areaWest.createChoice("杉並区"),
-      areaWest.createChoice("練馬区"),
-      areaWest.createChoice("豊島区"),
-    ]);
+  var areaGrid2 = form.addCheckboxGridItem();
+  areaGrid2
+    .setTitle("エリア②（副都心・西部）")
+    .setRows(["選択"])
+    .setColumns(["渋谷区", "中野区", "杉並区", "練馬区", "豊島区"])
+    .setRequired(false);
 
-  var areaNorth = form.addCheckboxItem();
-  areaNorth
-    .setTitle("エリア（北部・城北）")
-    .setChoices([
-      areaNorth.createChoice("北区"),
-      areaNorth.createChoice("荒川区"),
-      areaNorth.createChoice("板橋区"),
-      areaNorth.createChoice("足立区"),
-      areaNorth.createChoice("葛飾区"),
-    ]);
+  var areaGrid3 = form.addCheckboxGridItem();
+  areaGrid3
+    .setTitle("エリア③（北部・城北）")
+    .setRows(["選択"])
+    .setColumns(["北区", "荒川区", "板橋区", "足立区", "葛飾区"])
+    .setRequired(false);
 
-  var areaEast = form.addCheckboxItem();
-  areaEast
-    .setTitle("エリア（東部・下町）")
-    .setChoices([
-      areaEast.createChoice("台東区"),
-      areaEast.createChoice("墨田区"),
-      areaEast.createChoice("江東区"),
-      areaEast.createChoice("江戸川区"),
-    ]);
+  var areaGrid4 = form.addCheckboxGridItem();
+  areaGrid4
+    .setTitle("エリア④（東部・下町）")
+    .setRows(["選択"])
+    .setColumns(["台東区", "墨田区", "江東区", "江戸川区"])
+    .setRequired(false);
 
-  var areaSouth = form.addCheckboxItem();
-  areaSouth
-    .setTitle("エリア（南部・城南）")
-    .setChoices([
-      areaSouth.createChoice("品川区"),
-      areaSouth.createChoice("目黒区"),
-      areaSouth.createChoice("大田区"),
-      areaSouth.createChoice("世田谷区"),
-    ]);
+  var areaGrid5 = form.addCheckboxGridItem();
+  areaGrid5
+    .setTitle("エリア⑤（南部・城南）")
+    .setRows(["選択"])
+    .setColumns(["品川区", "目黒区", "大田区", "世田谷区"])
+    .setRequired(false);
 
   // ── 5. 家賃上限（小数対応：8.5 = 85,000円） ──────────────────
   form.addSectionHeaderItem().setTitle("▼ 希望条件");

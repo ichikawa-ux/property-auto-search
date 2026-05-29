@@ -91,24 +91,30 @@ def _get_int(row: dict, *keys, default: int = 0) -> int:
 def _collect_areas(row: dict) -> list[str]:
     """
     エリア列を複数のグループ列から収集する。
-    新フォーム形式（エリア（都心）等）と旧フォーム形式（エリア）の両方に対応。
+    グリッド形式（「エリア①（都心） [選択]」等）・旧チェックボックス形式（「エリア（都心）」等）・
+    手動入力形式（「エリア」）のすべてに対応。列名に「エリア」が含まれる列をすべて走査する。
     """
-    area_columns = [
-        "エリア（都心）",
-        "エリア（副都心・西部）",
-        "エリア（北部・城北）",
-        "エリア（東部・下町）",
-        "エリア（南部・城南）",
-        "エリア",  # 旧フォーム形式・手動入力
-    ]
     combined = []
-    for col in area_columns:
-        val = str(row.get(col, ""))
-        for a in val.split(","):
+    for col, val in row.items():
+        if not col or "エリア" not in str(col):
+            continue
+        val_str = str(val) if val else ""
+        if not val_str:
+            continue
+        # グリッド形式の値はカンマ区切り、チェックボックス形式も同様
+        for a in val_str.replace(";", ",").split(","):
             a = a.strip()
-            if a:
+            if a and a in AREA_LOOKUP:
                 combined.append(a)
-    return combined
+
+    # 重複除去・順序保持
+    seen: set[str] = set()
+    result = []
+    for a in combined:
+        if a not in seen:
+            seen.add(a)
+            result.append(a)
+    return result
 
 
 def _expand_layouts(types_raw: str, rooms_raw: str, legacy_raw: str = "") -> list[str]:
